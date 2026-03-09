@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/db.js'; // Note: .js extension is required in ESM
+import { sequelize } from '../config/db.js';
 import bcrypt from 'bcryptjs';
 
 const User = sequelize.define('User', {
@@ -26,6 +26,12 @@ const User = sequelize.define('User', {
     hooks: {
         beforeCreate: async (user) => {
             user.password = await bcrypt.hash(user.password, 10);
+        },
+        beforeUpdate: async (user) => {
+            // Only hash the password if it has been modified
+            if (user.changed('password')) {
+                user.password = await bcrypt.hash(user.password, 10);
+            }
         }
     }
 });

@@ -1,33 +1,95 @@
-import React, { useState } from 'react';
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, Mail, Lock, User, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { QrCode, Mail, Lock, User, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
+import toast from 'react-hot-toast';
 
 const Register = () => {
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
+  const [isDark, setIsDark] = useState(true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // TODO: Connect to your Node.js JWT backend
-    console.log('Registration attempt:', formData);
+  const { register, isLoading, error } = useAuthStore();
+  const navigate = useNavigate();
+
+  // Theme logic
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDark(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setIsDark(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newThemeState = !isDark;
+    setIsDark(newThemeState);
+    if (newThemeState) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
   };
 
+ const handleSubmit = async (e) => {
+    e.preventDefault();
+    // Map 'fullName' to 'name' for the backend
+    const userData = {
+      name: formData.fullName,
+      email: formData.email,
+      password: formData.password
+    };
+    
+    const result = await register(userData);
+    
+    if (result.success) {
+    // Add the success toast here
+    toast.success('Account created successfully!');
+    navigate('/dashboard'); 
+  } else {
+    // Optional: Error toast
+    toast.error('Failed to create account');
+  }
+  };
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-slate-600/30 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-slate-200 dark:selection:bg-slate-600/30 relative overflow-hidden transition-colors duration-300">
+      
+      {/* Floating Theme Toggle */}
+      <div className="absolute top-6 right-6 z-50">
+        <button
+          onClick={toggleTheme}
+          className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full shadow-sm hover:shadow transition-all group"
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+          ) : (
+            <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform duration-300" />
+          )}
+        </button>
+      </div>
+
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-100/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-300/30 dark:bg-slate-100/5 rounded-full blur-[120px] pointer-events-none transition-colors duration-300" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <Link to="/" className="flex justify-center items-center space-x-2 mb-8 group">
-          <div className="bg-slate-800 p-2 rounded-lg border border-slate-700/50 group-hover:border-slate-500 transition-colors">
-            <QrCode className="w-6 h-6 text-white" />
+          <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700/50 group-hover:border-slate-300 dark:group-hover:border-slate-500 transition-colors">
+            <QrCode className="w-6 h-6 text-slate-900 dark:text-white transition-colors" />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-white">NexusQR</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white transition-colors">NexusQR</span>
         </Link>
-        <h2 className="text-center text-3xl font-bold tracking-tight text-white">
+        <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white transition-colors">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-slate-400">
+        <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400 transition-colors">
           Start building dynamic QR campaigns today
         </p>
       </div>
@@ -38,24 +100,24 @@ const Register = () => {
         transition={{ duration: 0.5 }}
         className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10"
       >
-        <div className="bg-slate-900/50 py-8 px-4 shadow-xl shadow-black/40 sm:rounded-2xl sm:px-10 border border-slate-800 backdrop-blur-sm">
+        <div className="bg-white dark:bg-slate-900/50 py-8 px-4 shadow-xl shadow-slate-200/50 dark:shadow-black/40 sm:rounded-2xl sm:px-10 border border-slate-200 dark:border-slate-800 backdrop-blur-sm transition-colors duration-300">
           <form className="space-y-5" onSubmit={handleSubmit}>
             
             {/* Full Name Input */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-slate-300">
+              <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
                 Full Name
               </label>
               <div className="mt-2 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-500" />
+                  <User className="h-5 w-5 text-slate-400 dark:text-slate-500 transition-colors" />
                 </div>
                 <input
                   id="fullName"
                   name="fullName"
                   type="text"
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-700 rounded-lg bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-400 transition-colors sm:text-sm"
                   placeholder="John Doe"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -65,19 +127,19 @@ const Register = () => {
 
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
                 Email address
               </label>
               <div className="mt-2 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-500" />
+                  <Mail className="h-5 w-5 text-slate-400 dark:text-slate-500 transition-colors" />
                 </div>
                 <input
                   id="email"
                   name="email"
                   type="email"
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-700 rounded-lg bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-400 transition-colors sm:text-sm"
                   placeholder="you@company.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -87,31 +149,31 @@ const Register = () => {
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
                 Password
               </label>
               <div className="mt-2 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-500" />
+                  <Lock className="h-5 w-5 text-slate-400 dark:text-slate-500 transition-colors" />
                 </div>
                 <input
                   id="password"
                   name="password"
                   type="password"
                   required
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-700 rounded-lg bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-400 transition-colors sm:text-sm"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
               </div>
-              <p className="mt-2 text-xs text-slate-500">Must be at least 8 characters long.</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 transition-colors">Must be at least 8 characters long.</p>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full flex justify-center items-center space-x-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-black bg-white hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 focus:ring-white transition-all mt-6"
+              className="w-full flex justify-center items-center space-x-2 py-2.5 px-4 border border-transparent rounded-lg shadow-md dark:shadow-[0_0_15px_rgba(255,255,255,0.1)] text-sm font-semibold text-white dark:text-black bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950 focus:ring-slate-900 dark:focus:ring-white transition-all mt-6"
             >
               <span>Create Account</span>
               <ArrowRight className="w-4 h-4" />
@@ -121,17 +183,17 @@ const Register = () => {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
+                <div className="w-full border-t border-slate-200 dark:border-slate-800 transition-colors" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-900 text-slate-500">
+                <span className="px-2 bg-white dark:bg-slate-900 text-slate-500 transition-colors">
                   Already have an account?
                 </span>
               </div>
             </div>
 
             <div className="mt-6 text-center">
-              <Link to="/login" className="text-sm font-medium text-white hover:text-slate-300 transition-colors">
+              <Link to="/login" className="text-sm font-medium text-slate-900 dark:text-white hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                 Sign in instead
               </Link>
             </div>

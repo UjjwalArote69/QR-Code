@@ -1,14 +1,13 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search, Sun, Moon, Menu } from 'lucide-react';
 
-// Accept leftContent as a prop
-const Topbar = ({ leftContent }) => {
+const Topbar = ({ leftContent, toggleMobileMenu }) => {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
@@ -21,7 +20,6 @@ const Topbar = ({ leftContent }) => {
   const toggleTheme = () => {
     const newThemeState = !isDark;
     setIsDark(newThemeState);
-    
     if (newThemeState) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -32,18 +30,22 @@ const Topbar = ({ leftContent }) => {
   };
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-sm shrink-0 transition-colors duration-300">
+    <header className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-sm shrink-0 transition-colors duration-300">
         
-      {/* Dynamic Left Content Zone */}
-      <div className="flex items-center">
+      {/* Dynamic Left Content Zone with Mobile Toggle */}
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={toggleMobileMenu}
+          className="md:hidden p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-md"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         {leftContent}
       </div>
 
       {/* Right Controls: Search & Theme Toggle */}
-      <div className="flex items-center space-x-4 ml-auto">
-        
-        {/* Search Bar */}
-        <div className="relative w-64 md:w-72 hidden sm:block">
+      <div className="flex items-center space-x-3 sm:space-x-4 ml-auto">
+        <div className="relative w-48 md:w-72 hidden md:block">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
           </div>
@@ -54,19 +56,13 @@ const Topbar = ({ leftContent }) => {
           />
         </div>
 
-        {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
           className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-all border border-transparent focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700 flex items-center justify-center group"
           title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {isDark ? (
-            <Sun className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-          ) : (
-            <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform duration-300" />
-          )}
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
-        
       </div>
     </header>
   );
