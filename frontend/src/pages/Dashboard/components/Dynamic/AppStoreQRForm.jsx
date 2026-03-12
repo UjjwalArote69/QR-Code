@@ -1,7 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useContext, useEffect } from 'react';
-import { generateQRCode } from '../../../api/qrcode.api';
-import { BuilderContext } from '../Dashboard'; 
+import useQRStore from '../../../../store/qrStore'; // <-- Added import
+import { BuilderContext } from '../../Dashboard'; 
 import { 
   ArrowLeft, Smartphone, AlertCircle, 
   Settings2, Palette, ChevronDown, Check,
@@ -11,7 +11,16 @@ import {
 const AppStoreQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
   
-  // Content State
+  // 1. Pull common state and actions from the store
+  const { 
+    title, setTitle, 
+    fgColor, setFgColor, 
+    bgColor, setBgColor, 
+    isLoading, error, setError,
+    createQRCode 
+  } = useQRStore();
+
+  // 2. Keep ONLY type-specific state local
   const [appData, setAppData] = useState({
     appName: '',
     developer: '',
@@ -21,15 +30,6 @@ const AppStoreQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
     websiteLink: ''
   });
   
-  const [title, setTitle] = useState('');
-  
-  // Design State
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#ffffff');
-
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [openSection, setOpenSection] = useState('content');
 
   useEffect(() => {
@@ -37,6 +37,7 @@ const AppStoreQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
     if (builderStep === 3) setOpenSection('design');
   }, [builderStep]);
 
+  // Sync Live Preview upwards
   useEffect(() => {
     if (onLiveUpdate) {
       onLiveUpdate({ 
@@ -72,28 +73,18 @@ const AppStoreQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // 3. Call the store's action to save it to the backend
+    const result = await createQRCode({
+      title: title || `${appData.appName} App`,
+      qrType: 'App Store', 
+      content: appData, 
+    });
 
-    try {
-      const result = await generateQRCode({
-        title: title || `${appData.appName} App`,
-        qrType: 'App Store', 
-        content: appData, 
-      });
-
-      if (result.success) {
-        onGenerated(result.qrLink);
-      } else {
-        setError("Failed to generate. Please try again.");
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong! Are you logged in?");
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      // For Dynamic QRs, we pass the tracking link to the generator
+      onGenerated(result.qrLink);
     }
   };
-
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-10">
@@ -245,10 +236,10 @@ const AppStoreQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={loading || !appData.appName || (!appData.iosLink && !appData.androidLink)}
+          disabled={isLoading || !appData.appName || (!appData.iosLink && !appData.androidLink)}
           className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-8 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
-          {loading ? 'Generating...' : <><Check className="w-5 h-5" /> Complete setup</>}
+          {isLoading ? 'Generating...' : <><Check className="w-5 h-5" /> Complete setup</>}
         </button>
       </div>
     </div>

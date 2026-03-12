@@ -3,12 +3,12 @@ import React, {
   useContext,
 } from "react";
 import QRGridSection from "../components/QRGridSection";
-import WebsiteQRForm from "../components/WebsiteQRForm";
-import VCardQRForm from "../components/VCardQRForm";
+import WebsiteQRForm from "../components/Dynamic/WebsiteQRForm";
+import VCardQRForm from "../components/Dynamic/VCardQRForm";
 import { QRCodeSVG } from "qrcode.react";
 import { BuilderContext } from "../Dashboard";
-import PdfQRForm from "../components/PdfQRForm";
-import VideoQRForm from "../components/VideoQRForm";
+import PdfQRForm from "../components/Dynamic/PdfQRForm";
+import VideoQRForm from "../components/Dynamic/VideoQRForm";
 import {
   Globe,
   FileText,
@@ -27,14 +27,18 @@ import {
   MessageSquare,
   Wifi,
 } from "lucide-react";
-import ImageQRForm from "../components/ImageQRForm";
-import LinksQRForm from "../components/LinksQRForm";
-import SocialQRForm from "../components/SocialQRForm";
-import Mp3QRForm from "../components/Mp3QRForm";
-import BusinessQRForm from "../components/BusinessQRForm";
-import CouponQRForm from "../components/CouponQRForm";
-import AppStoreQRForm from "../components/AppStoreQRForm";
-import LandingPageQRForm from "../components/LandingPageQRForm";
+import ImageQRForm from "../components/Dynamic/ImageQRForm";
+import LinksQRForm from "../components/Dynamic/LinksQRForm";
+import SocialQRForm from "../components/Dynamic/SocialQRForm";
+import Mp3QRForm from "../components/Dynamic/Mp3QRForm";
+import BusinessQRForm from "../components/Dynamic/BusinessQRForm";
+import CouponQRForm from "../components/Dynamic/CouponQRForm";
+import AppStoreQRForm from "../components/Dynamic/AppStoreQRForm";
+import LandingPageQRForm from "../components/Dynamic/LandingPageQRForm";
+import TextQRForm from "../components/Static/TextQRForm";
+import SmsQRForm from "../components/Static/SmsQRForm";
+import EmailQRForm from "../components/Static/EmailQRForm";
+import WifiQRForm from "../components/Static/WifiQRForm";
 
 const CreateQRView = () => {
   const {
@@ -324,6 +328,30 @@ const CreateQRView = () => {
               />
             ) : (selectedType.name === "Landing page" || selectedType.name === "Landing Page") ? (
               <LandingPageQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : selectedType.name === "Text" ? (
+              <TextQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : selectedType.name === "Email" ? (
+              <EmailQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : selectedType.name === "Wi-Fi" ? (
+              <WifiQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : selectedType.name === "SMS" ? (
+              <SmsQRForm
                 onBack={handleBackToGrid} 
                 onGenerated={(link) => setGeneratedLink(link)} 
                 onLiveUpdate={(data) => setLivePreview(data)} 

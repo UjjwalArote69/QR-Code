@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useContext, useEffect } from 'react';
-import { generateQRCode } from '../../../api/qrcode.api';
-import { BuilderContext } from '../Dashboard'; 
+import useQRStore from '../../../../store/qrStore'; // <-- Added store import
+import { BuilderContext } from '../../Dashboard'; 
 import { 
   ArrowLeft, Contact, AlertCircle, 
   Settings2, Palette, ChevronDown, Check,
@@ -11,7 +11,16 @@ import {
 const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
   
-  // vCard Content State
+  // 1. Pull common state and actions from the store
+  const { 
+    title, setTitle, 
+    fgColor, setFgColor, 
+    bgColor, setBgColor, 
+    isLoading, error, setError,
+    createQRCode 
+  } = useQRStore();
+
+  // 2. Keep ONLY type-specific state local
   const [contactData, setContactData] = useState({
     firstName: '',
     lastName: '',
@@ -23,15 +32,6 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
     address: ''
   });
   
-  const [title, setTitle] = useState('');
-  
-  // Design State
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#ffffff');
-
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [openSection, setOpenSection] = useState('content');
 
   useEffect(() => {
@@ -41,8 +41,6 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
 
   useEffect(() => {
     if (onLiveUpdate) {
-      // For the live preview, we use a dummy URL so the QR code can render *something*
-      // before it's actually generated on the backend.
       onLiveUpdate({ 
         url: 'https://nexusqr.com/preview-vcard', 
         fgColor, 
@@ -71,25 +69,16 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // 3. Call the store's action to save it to the backend
+    const result = await createQRCode({
+      title: title || `${contactData.firstName}'s vCard`,
+      qrType: 'vCard Plus', 
+      content: contactData, 
+    });
 
-    try {
-      const result = await generateQRCode({
-        title: title || `${contactData.firstName}'s vCard`,
-        qrType: 'vCard Plus', // MUST match the backend check!
-        content: contactData, // Sending the JSON object to our new backend field
-      });
-
-      if (result.success) {
-        onGenerated(result.qrLink);
-      } else {
-        setError("Failed to generate. Please try again.");
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong! Are you logged in?");
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      // For dynamic QRs, we pass the tracking link to the generator
+      onGenerated(result.qrLink);
     }
   };
 
@@ -276,10 +265,10 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={loading || !contactData.firstName || !contactData.phone}
+          disabled={isLoading || !contactData.firstName || !contactData.phone}
           className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
-          {loading ? (
+          {isLoading ? (
              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -287,7 +276,7 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           ) : (
             <Check className="w-5 h-5" />
           )}
-          {loading ? 'Generating...' : 'Complete setup'}
+          {isLoading ? 'Generating...' : 'Complete setup'}
         </button>
       </div>
     </div>

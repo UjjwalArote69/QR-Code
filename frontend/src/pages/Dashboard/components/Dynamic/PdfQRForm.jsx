@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { createQRWithFile, generateQRCode } from '../../../api/qrcode.api';
-import { BuilderContext } from '../Dashboard'; 
+import useQRStore from '../../../../store/qrStore'; // <-- Added store import
+import { createQRWithFile } from '../../../../api/qrcode.api';
+import { BuilderContext } from '../../Dashboard'; 
 import { 
   ArrowLeft, FileText, AlertCircle, UploadCloud, 
   Settings2, Palette, ChevronDown, Check, X, Link as LinkIcon
@@ -10,19 +11,19 @@ import {
 const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
   
-  // Form State
-  const [file, setFile] = useState(null);
-  const [pdfUrl, setPdfUrl] = useState(''); // Fallback if they want to link an external PDF
-  const [title, setTitle] = useState('');
-  const [uploadMode, setUploadMode] = useState('file'); // 'file' or 'url'
-  
-  // Design State
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#ffffff');
+  // 1. Pull common state and actions from the store
+  const { 
+    title, setTitle, 
+    fgColor, setFgColor, 
+    bgColor, setBgColor, 
+    isLoading, error, setError,
+    createQRCode // Used for the 'URL' mode
+  } = useQRStore();
 
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // 2. Keep ONLY type-specific state local
+  const [file, setFile] = useState(null);
+  const [pdfUrl, setPdfUrl] = useState(''); 
+  const [uploadMode, setUploadMode] = useState('file'); 
   const [openSection, setOpenSection] = useState('content');
   const fileInputRef = useRef(null);
 
@@ -35,8 +36,6 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   // Sync Live Preview upwards
   useEffect(() => {
     if (onLiveUpdate) {
-      // If we have a file, ideally we'd show a preview URL, but for the QR code display
-      // we just need *some* URL to render the preview QR.
       const displayUrl = pdfUrl || (file ? 'https://nexusqr.com/preview-pdf' : '');
       onLiveUpdate({ url: displayUrl, fgColor, bgColor, title });
     }
@@ -54,7 +53,7 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
         setError('Please select a valid PDF file.');
         return;
       }
-      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      if (selectedFile.size > 10 * 1024 * 1024) { 
         setError('File size must be less than 10MB.');
         return;
       }
@@ -78,24 +77,23 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       return;
     }
 
-    setLoading(true);
     setError(null);
 
     try {
       let result;
 
       if (uploadMode === 'file') {
-        // Build FormData to send the physical file
+        // Build FormData for physical file upload
         const formData = new FormData();
         formData.append('file', file);
         formData.append('title', title || 'My PDF QR');
         formData.append('qrType', 'PDF');
         
-        // Call the new file API
+        // Use the direct file API but manage loading via the parent if needed
         result = await createQRWithFile(formData);
       } else {
-        // Call the standard JSON API for direct URLs
-        result = await generateQRCode({
+        // Use the centralized store action for the direct URL mode
+        result = await createQRCode({
           title: title || 'My PDF QR',
           qrType: 'PDF',
           targetUrl: pdfUrl,
@@ -104,13 +102,9 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
 
       if (result.success) {
         onGenerated(result.qrLink);
-      } else {
-        setError("Failed to generate. Please try again.");
       }
     } catch (err) {
       setError(err.message || "Something went wrong! Are you logged in?");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -307,10 +301,10 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={loading || (uploadMode === 'file' && !file) || (uploadMode === 'url' && !pdfUrl)}
+          disabled={isLoading || (uploadMode === 'file' && !file) || (uploadMode === 'url' && !pdfUrl)}
           className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
-          {loading ? (
+          {isLoading ? (
             <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -318,7 +312,7 @@ const PdfQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           ) : (
             <Check className="w-5 h-5" />
           )}
-          {loading ? 'Generating...' : 'Complete setup'}
+          {isLoading ? 'Generating...' : 'Complete setup'}
         </button>
       </div>
     </div>

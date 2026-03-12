@@ -1,35 +1,36 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useContext, useEffect } from 'react';
-import { generateQRCode } from '../../../api/qrcode.api';
-import { BuilderContext } from '../Dashboard'; 
+import useQRStore from '../../../../store/qrStore'; // <-- Make sure to import the store
+import { BuilderContext } from '../../Dashboard'; 
 import { 
-  ArrowLeft, LayoutTemplate, AlertCircle, 
+  ArrowLeft, Ticket, AlertCircle, 
   Settings2, Palette, ChevronDown, Check,
-  Type, AlignLeft, Link as LinkIcon, Image as ImageIcon, MousePointerClick
+  Building2, Tag, Calendar, Link as LinkIcon, AlignLeft
 } from 'lucide-react';
 
-const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
+const CouponQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
   
-  // Content State
-  const [pageData, setPageData] = useState({
+  // 1. Pull common state and actions from the store
+  const { 
+    title, setTitle, 
+    fgColor, setFgColor, 
+    bgColor, setBgColor, 
+    isLoading, error, setError,
+    createQRCode 
+  } = useQRStore();
+
+  // 2. Keep ONLY type-specific state local
+  const [coupon, setCoupon] = useState({
     companyName: '',
-    headline: '',
+    offerTitle: '',
     description: '',
-    heroImageUrl: '', // Optional hero image
-    buttonText: 'Learn More',
-    buttonUrl: ''
+    couponCode: '',
+    validUntil: '',
+    buttonUrl: '',
+    buttonText: 'Redeem Now'
   });
   
-  const [title, setTitle] = useState('');
-  
-  // Design State
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#ffffff');
-
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [openSection, setOpenSection] = useState('content');
 
   useEffect(() => {
@@ -37,16 +38,17 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
     if (builderStep === 3) setOpenSection('design');
   }, [builderStep]);
 
+  // Sync Live Preview upwards
   useEffect(() => {
     if (onLiveUpdate) {
       onLiveUpdate({ 
-        url: 'https://nexusqr.com/preview-landing', 
+        url: 'https://nexusqr.com/preview-coupon', 
         fgColor, 
         bgColor, 
         title 
       });
     }
-  }, [pageData, fgColor, bgColor, title]);
+  }, [coupon, fgColor, bgColor, title]);
 
   const handleSectionToggle = (sectionName, stepNumber) => {
     setOpenSection(sectionName);
@@ -54,43 +56,28 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   };
 
   const handleChange = (e) => {
-    setPageData({ ...pageData, [e.target.name]: e.target.value });
+    setCoupon({ ...coupon, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!pageData.headline) {
-      setError("Headline is required.");
+    if (!coupon.companyName || !coupon.offerTitle || !coupon.couponCode) {
+      setError("Company Name, Offer Title, and Coupon Code are required.");
       handleSectionToggle('content', 2);
       return;
     }
 
-    if (!pageData.buttonUrl) {
-      setError("Button destination URL is required.");
-      handleSectionToggle('content', 2);
-      return;
-    }
+    // 3. Call the store's action to save it to the backend
+    const result = await createQRCode({
+      title: title || `${coupon.companyName} Coupon`,
+      qrType: 'Coupon', 
+      content: coupon, 
+    });
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await generateQRCode({
-        title: title || `${pageData.companyName || 'Promo'} Landing Page`,
-        qrType: 'Landing page', // MUST match your static list array!
-        content: pageData, 
-      });
-
-      if (result.success) {
-        onGenerated(result.qrLink);
-      } else {
-        setError("Failed to generate. Please try again.");
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong! Are you logged in?");
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      // For dynamic QRs, we pass the tracking link to the generator
+      onGenerated(result.qrLink);
     }
   };
 
@@ -102,8 +89,8 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 text-slate-800 dark:text-white font-medium">
-            <LayoutTemplate className="w-5 h-5 text-orange-500" />
-            Landing Page
+            <Ticket className="w-5 h-5 text-orange-500" />
+            Coupon QR
           </div>
         </div>
       </div>
@@ -121,66 +108,72 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           <button type="button" onClick={() => handleSectionToggle('content', 2)} className="w-full flex items-center justify-between p-5 text-left bg-transparent">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${openSection === 'content' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                <LayoutTemplate className="w-5 h-5" />
+                <Ticket className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 dark:text-white text-base">1. Content</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Build your page</p>
+                <h3 className="font-semibold text-slate-900 dark:text-white text-base">1. Coupon Details</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Setup your discount offer</p>
               </div>
             </div>
             <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${openSection === 'content' ? 'rotate-180 text-orange-500' : ''}`} />
           </button>
           
           {openSection === 'content' && (
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-4 animate-in slide-in-from-top-2 duration-200">
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Brand / Company Name</label>
-                  <input type="text" name="companyName" value={pageData.companyName} onChange={handleChange} placeholder="Optional branding" className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Headline <span className="text-orange-500">*</span></label>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Company / Brand Name <span className="text-orange-500">*</span></label>
                   <div className="relative">
-                    <Type className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <input type="text" name="headline" value={pageData.headline} onChange={handleChange} placeholder="E.g., Big Summer Sale!" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" required />
+                    <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input type="text" name="companyName" value={coupon.companyName} onChange={handleChange} placeholder="e.g., Nexus Shop" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" required />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Offer Title <span className="text-orange-500">*</span></label>
+                  <input type="text" name="offerTitle" value={coupon.offerTitle} onChange={handleChange} placeholder="e.g., 20% OFF Entire Order" className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description / Terms</label>
                   <div className="relative">
                     <AlignLeft className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <textarea name="description" value={pageData.description} onChange={handleChange} rows="3" placeholder="Tell them what they're getting..." className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none resize-none"></textarea>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Hero Image URL (Optional)</label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <input type="url" name="heroImageUrl" value={pageData.heroImageUrl} onChange={handleChange} placeholder="https://..." className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
+                    <textarea name="description" value={coupon.description} onChange={handleChange} rows="2" placeholder="Valid on all items. Cannot be combined with other offers." className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none resize-none"></textarea>
                   </div>
                 </div>
               </div>
 
               <hr className="border-slate-200 dark:border-slate-800" />
 
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Call to Action</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Button Text <span className="text-orange-500">*</span></label>
-                    <div className="relative">
-                      <MousePointerClick className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <input type="text" name="buttonText" value={pageData.buttonText} onChange={handleChange} placeholder="Buy Now" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" required />
-                    </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Coupon Code <span className="text-orange-500">*</span></label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input type="text" name="couponCode" value={coupon.couponCode} onChange={handleChange} placeholder="e.g., SAVE20" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none uppercase font-bold tracking-wider" required />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Destination URL <span className="text-orange-500">*</span></label>
-                    <div className="relative">
-                      <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <input type="url" name="buttonUrl" value={pageData.buttonUrl} onChange={handleChange} placeholder="https://" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" required />
-                    </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Valid Until (Optional)</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input type="date" name="validUntil" value={coupon.validUntil} onChange={handleChange} className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
                   </div>
+                </div>
+              </div>
+
+              <hr className="border-slate-200 dark:border-slate-800" />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Button Link URL</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input type="url" name="buttonUrl" value={coupon.buttonUrl} onChange={handleChange} placeholder="https://yourstore.com" className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
+                  </div>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Button Text</label>
+                  <input type="text" name="buttonText" value={coupon.buttonText} onChange={handleChange} placeholder="Redeem Now" className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
               </div>
 
@@ -239,7 +232,7 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
             <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">QR Code Name</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Summer Sale Page" className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all shadow-sm" />
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Summer Sale 2024" className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all shadow-sm" />
               </div>
             </div>
           )}
@@ -250,14 +243,14 @@ const LandingPageQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={loading || !pageData.headline || !pageData.buttonUrl}
+          disabled={isLoading || !coupon.companyName || !coupon.couponCode}
           className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
-          {loading ? 'Generating...' : <><Check className="w-5 h-5" /> Complete setup</>}
+          {isLoading ? 'Generating...' : <><Check className="w-5 h-5" /> Complete setup</>}
         </button>
       </div>
     </div>
   );
 };
 
-export default LandingPageQRForm;
+export default CouponQRForm;

@@ -1,8 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useContext, useEffect } from 'react';
-import { generateQRCode } from '../../../api/qrcode.api';
-import { BuilderContext } from '../Dashboard'; 
+import useQRStore from '../../../../store/qrStore'; // <-- Added store import
+import { BuilderContext } from '../../Dashboard'; 
 import { 
   ArrowLeft, AlignJustify, AlertCircle, 
   Settings2, Palette, ChevronDown, Check,
@@ -12,20 +12,20 @@ import {
 const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
   
-  // Content State
+  // 1. Pull common state and actions from the store
+  const { 
+    title, setTitle, 
+    fgColor, setFgColor, 
+    bgColor, setBgColor, 
+    isLoading, error, setError,
+    createQRCode 
+  } = useQRStore();
+
+  // 2. Keep ONLY type-specific state local
   const [profile, setProfile] = useState({ name: '', bio: '' });
   const [links, setLinks] = useState([
     { id: 1, title: 'My Website', url: '' }
   ]);
-  const [title, setTitle] = useState('');
-  
-  // Design State
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#ffffff');
-
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [openSection, setOpenSection] = useState('content');
 
   useEffect(() => {
@@ -33,6 +33,7 @@ const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
     if (builderStep === 3) setOpenSection('design');
   }, [builderStep]);
 
+  // Sync Live Preview upwards
   useEffect(() => {
     if (onLiveUpdate) {
       onLiveUpdate({ 
@@ -73,7 +74,6 @@ const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       return;
     }
     
-    // Validate that all added links have URLs
     const invalidLinks = links.some(l => !l.url || !l.title);
     if (invalidLinks) {
       setError("Please ensure all your links have a title and URL.");
@@ -81,25 +81,16 @@ const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // 3. Call the store's action to save it to the backend
+    const result = await createQRCode({
+      title: title || `${profile.name}'s Links`,
+      qrType: 'List of links',
+      content: { profile, links }, 
+    });
 
-    try {
-      const result = await generateQRCode({
-        title: title || `${profile.name}'s Links`,
-        qrType: 'List of links', // Matches the name in CreateQRView
-        content: { profile, links }, // Save structured JSON
-      });
-
-      if (result.success) {
-        onGenerated(result.qrLink);
-      } else {
-        setError("Failed to generate. Please try again.");
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong! Are you logged in?");
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      // Pass the tracking link to the generator
+      onGenerated(result.qrLink);
     }
   };
 
@@ -261,10 +252,10 @@ const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex justify-end">
         <button 
           onClick={handleSubmit}
-          disabled={loading || !profile.name}
+          disabled={isLoading || !profile.name}
           className="flex items-center justify-center gap-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white px-8 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
-          {loading ? (
+          {isLoading ? (
              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -272,7 +263,7 @@ const LinksQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           ) : (
             <Check className="w-5 h-5" />
           )}
-          {loading ? 'Generating...' : 'Complete setup'}
+          {isLoading ? 'Generating...' : 'Complete setup'}
         </button>
       </div>
     </div>
