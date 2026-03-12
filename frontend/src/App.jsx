@@ -23,6 +23,11 @@ import TemplatesView from "./pages/Dashboard/views/TemplatesView";
 import SettingsView from "./pages/Dashboard/views/SettingsView";
 import VCardProfile from './pages/Public/VCardProfile';
 import LinksProfile from "./pages/Public/LinksProfile";
+import SocialProfile from "./pages/Public/SocialProfile";
+import BusinessProfile from "./pages/Public/BusinessProfile";
+import CouponProfile from "./pages/Public/CouponProfile";
+import AppStoreProfile from "./pages/Public/AppStoreProfile";
+import LandingProfile from "./pages/Public/LandingProfile";
 
 // Lazy Load Pages (Code Splitting)
 const LandingPage = lazy(
@@ -75,6 +80,11 @@ const App = () => {
           <Route path="/register" element={<Register/>}/>
           <Route path="/vcard/:shortId" element={<VCardProfile />} />
           <Route path="/links/:shortId" element={<LinksProfile />} />
+          <Route path="/social/:shortId" element={<SocialProfile />} />
+          <Route path="/business/:shortId" element={<BusinessProfile />} />
+          <Route path="/coupon/:shortId" element={<CouponProfile />} />
+          <Route path="/app/:shortId" element={<AppStoreProfile />} />
+          <Route path="/landing/:shortId" element={<LandingProfile />} />
           <Route
             path="/dashboard"
             element={

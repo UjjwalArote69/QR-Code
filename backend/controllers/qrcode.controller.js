@@ -103,6 +103,28 @@ export const redirectQR = async (
       );
     }
 
+    // 3. Social Media links
+    if (qrCode.qrType === 'Social Media' || qrCode.qrType === 'Social') {
+      return res.redirect(`${frontendUrl}/social/${shortId}`);
+    }
+
+    //4. Business Links
+    if (qrCode.qrType === 'Business') {
+      return res.redirect(`${frontendUrl}/business/${shortId}`);
+    }
+
+    // NEW: Redirect for Coupon
+    if (qrCode.qrType === 'Coupon') {
+      return res.redirect(`${frontendUrl}/coupon/${shortId}`);
+    }
+
+    if (qrCode.qrType === 'App Store' || qrCode.qrType === 'App') {
+      return res.redirect(`${frontendUrl}/app/${shortId}`);
+    }
+
+    if (qrCode.qrType === 'Landing page' || qrCode.qrType === 'Landing Page') {
+      return res.redirect(`${frontendUrl}/landing/${shortId}`);
+    }
     // Redirect user to their actual destination
     res.redirect(qrCode.targetUrl);
   } catch (error) {

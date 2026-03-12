@@ -29,6 +29,12 @@ import {
 } from "lucide-react";
 import ImageQRForm from "../components/ImageQRForm";
 import LinksQRForm from "../components/LinksQRForm";
+import SocialQRForm from "../components/SocialQRForm";
+import Mp3QRForm from "../components/Mp3QRForm";
+import BusinessQRForm from "../components/BusinessQRForm";
+import CouponQRForm from "../components/CouponQRForm";
+import AppStoreQRForm from "../components/AppStoreQRForm";
+import LandingPageQRForm from "../components/LandingPageQRForm";
 
 const CreateQRView = () => {
   const {
@@ -269,6 +275,58 @@ const CreateQRView = () => {
                 onLiveUpdate={(data) =>
                   setLivePreview(data)
                 }
+              />
+            ) : selectedType.name ===
+                "Social Media" ||
+              selectedType.name ===
+                "Social" ? (
+              <SocialQRForm
+                onBack={
+                  handleBackToGrid
+                }
+                onGenerated={(link) =>
+                  setGeneratedLink(link)
+                }
+                onLiveUpdate={(data) =>
+                  setLivePreview(data)
+                }
+              />
+            ) : selectedType.name ===
+              "MP3" ? (
+              <Mp3QRForm
+                onBack={
+                  handleBackToGrid
+                }
+                onGenerated={(link) =>
+                  setGeneratedLink(link)
+                }
+                onLiveUpdate={(data) =>
+                  setLivePreview(data)
+                }
+              />
+            ) : selectedType.name === "Business" ? (
+              <BusinessQRForm
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : selectedType.name === "Coupon" ? (
+              <CouponQRForm
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : (selectedType.name === "Apps" || selectedType.name === "App") ? (
+              <AppStoreQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
+              />
+            ) : (selectedType.name === "Landing page" || selectedType.name === "Landing Page") ? (
+              <LandingPageQRForm 
+                onBack={handleBackToGrid} 
+                onGenerated={(link) => setGeneratedLink(link)} 
+                onLiveUpdate={(data) => setLivePreview(data)} 
               />
             ) : (
               <div className="p-8 text-center text-slate-500 flex flex-col items-center justify-center h-full">

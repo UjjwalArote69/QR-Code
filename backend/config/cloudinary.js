@@ -25,12 +25,12 @@ const storage = new CloudinaryStorage({
       };
     }
     
-    // 2. NEW: Explicitly handle Videos
-    if (file.mimetype.startsWith('video/')) {
+    // 2. NEW: Explicitly handle Videos / audio
+    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
       return {
         folder: 'nexusqr_uploads',
-        resource_type: 'video', // Cloudinary requires this for mp4, webm, etc.
-        allowed_formats: ['mp4', 'webm', 'mov', 'ogg']
+        resource_type: 'video', // Cloudinary requires 'video' for audio files too!
+        allowed_formats: ['mp4', 'webm', 'mov', 'ogg', 'mp3', 'wav', 'mpeg'] // Added mp3, wav
       };
     }
     
