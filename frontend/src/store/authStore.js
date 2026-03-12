@@ -1,17 +1,31 @@
+/* eslint-disable no-unused-vars */
 import { create } from 'zustand';
 import { loginUser, registerUser, fetchProfile } from '../api/auth.api';
 
 const useAuthStore = create((set) => ({
   user: null,
-  isAuthenticated: false,
-  isLoading: false,
+  // Synchronously check local storage so the UI knows immediately
+  token: localStorage.getItem('token') || null,
+  isAuthenticated: !!localStorage.getItem('token'),
+  
+  // Start loading as true if we have a token, so ProtectedRoute waits for checkAuth
+  isLoading: !!localStorage.getItem('token'), 
   error: null,
 
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
       const data = await loginUser(credentials);
-      set({ user: data.user, isAuthenticated: true, isLoading: false });
+      
+      // Save to localStorage
+      localStorage.setItem('token', data.token);
+      
+      set({ 
+        user: data.user, 
+        token: data.token,
+        isAuthenticated: true, 
+        isLoading: false 
+      });
       return { success: true };
     } catch (error) {
       set({ 
@@ -26,7 +40,16 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await registerUser(userData);
-      set({ user: data.user, isAuthenticated: true, isLoading: false });
+      
+      // Save to localStorage
+      localStorage.setItem('token', data.token);
+
+      set({ 
+        user: data.user, 
+        token: data.token,
+        isAuthenticated: true, 
+        isLoading: false 
+      });
       return { success: true };
     } catch (error) {
       set({ 
@@ -38,20 +61,27 @@ const useAuthStore = create((set) => ({
   },
 
   checkAuth: async () => {
-    set({ isLoading: true, error: null });
+    const token = localStorage.getItem('token');
+    if (!token) {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+        return;
+    }
+
     try {
       const user = await fetchProfile();
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
-        console.log("Error: ", error);
-        
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      // ADD THIS CONSOLE LOG TO CATCH THE CULPRIT:
+      console.error("Auth Check Failed:", error.response?.data || error.message);
+      
+      localStorage.removeItem('token');
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
     }
   },
 
   logout: () => {
-    // Optional: Call a backend /logout endpoint here if you create one to clear the cookie
-    set({ user: null, isAuthenticated: false });
+    localStorage.removeItem('token');
+    set({ user: null, token: null, isAuthenticated: false });
   }
 }));
 

@@ -1,33 +1,8 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
 import { Search, Sun, Moon, Menu } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
 
 const Topbar = ({ leftContent, toggleMobileMenu }) => {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newThemeState = !isDark;
-    setIsDark(newThemeState);
-    if (newThemeState) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+ const { isDark, toggleTheme } = useTheme();
 
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-sm shrink-0 transition-colors duration-300">

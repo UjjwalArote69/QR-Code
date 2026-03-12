@@ -1,22 +1,37 @@
-import React, { useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { useState, Suspense, lazy, createContext } from "react";
 import Sidebar from "../../components/layout/Sidebar";
 import Topbar from "../../components/layout/Topbar";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { ContainerLoader } from "../../components/layout/Loader";
 
-// Your Views
-import CreateQRView from "./views/CreateQRView";
-import MyQRCodesView from "./views/MyQRCodesView";
-import StatisticsView from "./views/StatisticsView";
-import TemplatesView from "./views/TemplatesView";
-import PlansView from "./views/PlansView";
-import UserProfileView from "./views/UserProfileView";
-import HelpCenterView from "./views/HelpCenterView";
-import ContactView from "./views/ContactView";
-import SettingsView from "./views/SettingsView";
+// 1. Create Context to share builder state with the Topbar and Forms
+export const BuilderContext = createContext();
+
+// Lazy Load Dashboard Views
+const CreateQRView = lazy(() => import("./views/CreateQRView"));
+const MyQRCodesView = lazy(() => import("./views/MyQRCodesView"));
+const StatisticsView = lazy(() => import("./views/StatisticsView"));
+const TemplatesView = lazy(() => import("./views/TemplatesView"));
+const PlansView = lazy(() => import("./views/PlansView"));
+const UserProfileView = lazy(() => import("./views/UserProfileView"));
+const HelpCenterView = lazy(() => import("./views/HelpCenterView"));
+const ContactView = lazy(() => import("./views/ContactView"));
+const SettingsView = lazy(() => import("./views/SettingsView"));
+
+const ViewLoader = () => (
+  <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-950 transition-colors duration-300">
+    <Loader2 className="w-8 h-8 animate-spin text-slate-400 dark:text-slate-600" />
+  </div>
+);
 
 const Dashboard = () => {
   const [activeNav, setActiveNav] = useState("Create QR");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // --- GLOBAL BUILDER STATE ---
+  const [builderStep, setBuilderStep] = useState(1); // 1: Type, 2: Content, 3: Design
+  const [selectedType, setSelectedType] = useState(null);
 
   const renderContent = () => {
     switch (activeNav) {
@@ -37,22 +52,35 @@ const Dashboard = () => {
     switch (activeNav) {
       case "Create QR":
         return (
-          <>
-            {/* Desktop Breadcrumbs */}
-            <div className="items-center space-x-2 text-sm hidden sm:flex">
-              <div className="flex items-center px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white rounded-md font-medium border border-slate-300 dark:border-slate-700 transition-colors">
-                Select a QR Code
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
-              <div className="flex items-center px-3 py-1.5 text-slate-500 dark:text-slate-400 font-medium">Content</div>
-              <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
-              <div className="flex items-center px-3 py-1.5 text-slate-500 dark:text-slate-400 font-medium">Design</div>
-            </div>
-            {/* Mobile Title */}
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white sm:hidden">
-              Create QR
-            </h2>
-          </>
+          // Dynamic Clickable Breadcrumbs
+          <div className="flex items-center space-x-1 sm:space-x-2 text-[13px] sm:text-sm">
+            <button 
+              onClick={() => { setBuilderStep(1); setSelectedType(null); }}
+              className={`flex items-center px-2 sm:px-3 py-1.5 rounded-md font-medium transition-all ${builderStep === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            >
+              <span className="hidden sm:inline mr-1">1.</span> Type
+            </button>
+            
+            <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+            
+            <button 
+              onClick={() => selectedType && setBuilderStep(2)}
+              disabled={!selectedType}
+              className={`flex items-center px-2 sm:px-3 py-1.5 rounded-md font-medium transition-all ${builderStep === 2 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : selectedType ? 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer' : 'text-slate-400 dark:text-slate-600 opacity-50 cursor-not-allowed'}`}
+            >
+              <span className="hidden sm:inline mr-1">2.</span> Content
+            </button>
+            
+            <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+            
+            <button 
+              onClick={() => selectedType && setBuilderStep(3)}
+              disabled={!selectedType}
+              className={`flex items-center px-2 sm:px-3 py-1.5 rounded-md font-medium transition-all ${builderStep === 3 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : selectedType ? 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer' : 'text-slate-400 dark:text-slate-600 opacity-50 cursor-not-allowed'}`}
+            >
+              <span className="hidden sm:inline mr-1">3.</span> Design
+            </button>
+          </div>
         );
       case "My QR Codes": return <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Library</h2>;
       case "Help Center": return <h2 className="text-lg font-semibold text-slate-900 dark:text-white text-sm">Help & Docs</h2>;
@@ -63,23 +91,28 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden selection:bg-slate-200 dark:selection:bg-slate-700/50 transition-colors duration-300">
-      <Sidebar
-        activeNav={activeNav}
-        setActiveNav={setActiveNav}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-      />
-
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Topbar
-          leftContent={getTopbarContent()}
-          toggleMobileMenu={() => setIsMobileMenuOpen(true)}
+    // Wrap the app in the Context Provider
+    <BuilderContext.Provider value={{ builderStep, setBuilderStep, selectedType, setSelectedType }}>
+      <div className="flex h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden selection:bg-slate-200 dark:selection:bg-slate-700/50 transition-colors duration-300">
+        <Sidebar
+          activeNav={activeNav}
+          setActiveNav={setActiveNav}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
-        {/* The active view takes up the rest of the height and handles its own scrolling */}
-        {renderContent()}
-      </main>
-    </div>
+
+        <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+          <Topbar
+            leftContent={getTopbarContent()}
+            toggleMobileMenu={() => setIsMobileMenuOpen(true)}
+          />
+          
+          <Suspense fallback={<ContainerLoader text="Loading view..." />}>
+            {renderContent()}
+          </Suspense>
+        </main>
+      </div>
+    </BuilderContext.Provider>
   );
 };
 

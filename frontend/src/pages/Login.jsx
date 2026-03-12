@@ -1,43 +1,21 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+
+import  { useState,  } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Mail, Lock, ArrowRight, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
+import { useTheme } from '../hooks/useTheme';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [isDark, setIsDark] = useState(true);
 
-  const { login, isLoading, error } = useAuthStore();
+  const { login,  } = useAuthStore();
   const navigate = useNavigate();
 
-  // Theme logic
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
 
-  const toggleTheme = () => {
-    const newThemeState = !isDark;
-    setIsDark(newThemeState);
-    if (newThemeState) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+  const { isDark, toggleTheme } = useTheme();
 
  const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,7 +49,7 @@ const Login = () => {
       </div>
 
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-300/30 dark:bg-slate-100/5 rounded-full blur-[120px] pointer-events-none transition-colors duration-300" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-slate-300/30 dark:bg-slate-100/5 rounded-full blur-[60px] md:blur-[120px] pointer-events-none transition-colors duration-300" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <Link to="/" className="flex justify-center items-center space-x-2 mb-8 group">

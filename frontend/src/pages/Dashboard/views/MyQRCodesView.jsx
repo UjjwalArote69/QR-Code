@@ -1,194 +1,142 @@
-import React, { useState } from 'react';
-import { 
-  Search, Filter, Plus, MoreVertical, BarChart2, 
-  Download, Edit2, Copy, ExternalLink, Globe, 
-  FileText, Smartphone, CheckCircle2, Clock
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { fetchMyQRCodes, deleteQRCode } from '../../../api/qrcode.api'; // Import deleteQRCode
+import { QRCodeSVG } from 'qrcode.react';
+import { Loader2, Link as LinkIcon, BarChart2, Calendar, Copy, CheckCircle2, QrCode, Trash2 } from 'lucide-react'; // Added Trash2
 
 const MyQRCodesView = () => {
-  // Mock data representing the user's saved QR codes
-  const mockQRCodes = [
-    {
-      id: '1',
-      name: 'Spring Menu 2026',
-      type: 'PDF',
-      icon: FileText,
-      shortLink: 'nexusqr.com/r/sp-menu',
-      scans: 1248,
-      trend: '+12%',
-      status: 'active',
-      date: 'Mar 2, 2026',
-    },
-    {
-      id: '2',
-      name: 'NYC Subway Ad Campaign',
-      type: 'Website',
-      icon: Globe,
-      shortLink: 'nexusqr.com/r/nyc-sub',
-      scans: 8930,
-      trend: '+45%',
-      status: 'active',
-      date: 'Feb 15, 2026',
-    },
-    {
-      id: '3',
-      name: 'App Download Banner',
-      type: 'App Store',
-      icon: Smartphone,
-      shortLink: 'nexusqr.com/r/app-dl',
-      scans: 412,
-      trend: '-2%',
-      status: 'paused',
-      date: 'Jan 10, 2026',
+  const [qrCodes, setQrCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null); // Track which one is deleting
+
+  useEffect(() => {
+    const loadQRCodes = async () => {
+      try {
+        const result = await fetchMyQRCodes();
+        if (result.success) setQrCodes(result.data);
+      } catch (err) {
+        setError(err.message || "Failed to load QR codes.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadQRCodes();
+  }, []);
+
+  const handleCopyLink = (shortId) => {
+    const baseUrl = import.meta.env.VITE_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
+    navigator.clipboard.writeText(`${baseUrl}/q/${shortId}`);
+    setCopiedId(shortId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // NEW: Handle Delete
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this QR code? The printed code will stop working.")) return;
+    
+    setDeletingId(id);
+    try {
+      await deleteQRCode(id);
+      // Remove it from the UI immediately
+      setQrCodes(prev => prev.filter(qr => qr.id !== id));
+    } catch (err) {
+      alert("Failed to delete QR Code: " + (err.message || "Unknown error"));
+    } finally {
+      setDeletingId(null);
     }
-  ];
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full text-slate-500">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
+        <p>Loading your QR codes...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full">
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl max-w-md text-center">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-slate-950 transition-colors duration-300">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-50 dark:bg-slate-950/50">
       <div className="max-w-6xl mx-auto">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-              My QR Codes
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Manage, edit, and track your existing campaigns.
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">My QR Codes</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Manage and track your generated QR campaigns.</p>
           </div>
-          
-          {/* Primary Action */}
-          <button className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold rounded-lg shadow-sm hover:bg-slate-800 dark:hover:bg-slate-200 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600 shrink-0">
-            <Plus className="w-4 h-4" />
-            <span>Create QR Code</span>
-          </button>
-        </div>
-
-        {/* Toolbar: Search and Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
-          <div className="relative flex-1 w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500 sm:text-sm transition-colors"
-              placeholder="Search campaigns, tags, or links..."
-            />
-          </div>
-          
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button className="inline-flex items-center justify-center space-x-2 px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors sm:w-auto w-full text-sm font-medium">
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
+          <div className="bg-white dark:bg-slate-900 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-blue-500" />
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{qrCodes.length}</span>
           </div>
         </div>
 
-        {/* QR Code List */}
-        <div className="space-y-4">
-          {mockQRCodes.map((qr) => (
-            <div 
-              key={qr.id} 
-              className="flex flex-col lg:flex-row lg:items-center justify-between p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm transition-all group gap-6"
-            >
-              
-              {/* Left Column: Icon & Details */}
-              <div className="flex items-start lg:items-center gap-4 flex-1 min-w-0">
-                {/* QR Thumbnail Placeholder */}
-                <div className="w-16 h-16 shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors cursor-pointer">
-                  {/* Visual representation of a QR code */}
-                  <div className="grid grid-cols-2 gap-0.5 p-2 w-full h-full opacity-50 dark:opacity-40">
-                    <div className="bg-slate-800 dark:bg-slate-300 rounded-sm"></div>
-                    <div className="bg-slate-800 dark:bg-slate-300 rounded-sm"></div>
-                    <div className="bg-slate-800 dark:bg-slate-300 rounded-sm"></div>
-                    <div className="bg-slate-800 dark:bg-slate-300 rounded-sm w-3/4 h-3/4 self-end justify-self-end"></div>
+        {qrCodes.length === 0 ? (
+           /* Empty State */
+           <div className="p-8 text-center text-slate-500">No QR codes yet.</div>
+        ) : (
+          /* Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {qrCodes.map((qr) => (
+              <div key={qr.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                {/* Top Section */}
+                <div className="p-5 flex gap-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="w-24 h-24 bg-white border border-slate-200 rounded-xl p-2 shrink-0 flex items-center justify-center">
+                    <QRCodeSVG value={`${import.meta.env.VITE_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000'}/q/${qr.shortId}`} size={80} level={"H"} />
+                  </div>
+                  <div className="flex flex-col justify-center min-w-0">
+                    <h3 className="font-bold text-slate-900 dark:text-white truncate" title={qr.title}>{qr.title}</h3>
+                    <div className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-md w-max mt-1 mb-2">{qr.qrType}</div>
+                    <div className="flex items-center text-xs text-slate-500 mt-auto">
+                      <Calendar className="w-3.5 h-3.5 mr-1" /> {formatDate(qr.createdAt)}
+                    </div>
                   </div>
                 </div>
 
-                {/* Meta Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-lg truncate hover:underline cursor-pointer">
-                      {qr.name}
-                    </h3>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      qr.status === 'active' 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                    }`}>
-                      {qr.status === 'active' ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                      {qr.status}
-                    </span>
+                {/* Bottom Section: Stats & Actions */}
+                <div className="p-4 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <BarChart2 className="w-4 h-4 text-emerald-500" />
+                    <span>{qr.scanCount} scans</span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <qr.icon className="w-3.5 h-3.5" />
-                      <span>{qr.type}</span>
-                    </div>
-                    <span>•</span>
-                    <span className="truncate">{qr.date}</span>
-                  </div>
-
-                  {/* Short Link Action */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center px-2.5 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md max-w-sm">
-                      <span className="text-xs text-slate-600 dark:text-slate-300 font-mono truncate select-all">
-                        {qr.shortLink}
-                      </span>
-                    </div>
-                    <button className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors" title="Copy Link">
-                      <Copy className="w-4 h-4" />
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleCopyLink(qr.shortId)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-medium text-slate-700 transition-colors shadow-sm"
+                    >
+                      {copiedId === qr.shortId ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <LinkIcon className="w-4 h-4 text-slate-400" />}
                     </button>
-                    <button className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors" title="Visit Link">
-                      <ExternalLink className="w-4 h-4" />
+                    
+                    {/* DELETE BUTTON */}
+                    <button 
+                      onClick={() => handleDelete(qr.id)}
+                      disabled={deletingId === qr.id}
+                      className="p-1.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-lg text-slate-400 transition-colors shadow-sm disabled:opacity-50"
+                      title="Delete QR Code"
+                    >
+                      {deletingId === qr.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
               </div>
-
-              {/* Middle Column: Quick Stats */}
-              <div className="flex lg:flex-col items-center lg:items-end justify-between lg:justify-center border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50 pt-4 lg:pt-0 lg:px-6 shrink-0 w-full lg:w-48">
-                <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1 lg:mb-0">
-                  Total Scans
-                </div>
-                <div className="flex items-end gap-2">
-                  <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
-                    {qr.scans.toLocaleString()}
-                  </span>
-                  <span className={`text-xs font-medium mb-0.5 ${
-                    qr.trend.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'
-                  }`}>
-                    {qr.trend}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Column: Actions */}
-              <div className="flex items-center justify-end gap-2 shrink-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50 pt-4 lg:pt-0">
-                <button className="inline-flex items-center justify-center px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </button>
-                <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-2 ml-1">
-                  <button className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors" title="Analytics">
-                    <BarChart2 className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors" title="Edit Content">
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors" title="More Options">
-                    <MoreVertical className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          ))}
-        </div>
-
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,23 +2,20 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 
 export const protect = async (req, res, next) => {
-    let token = req.cookies.token;
+    let token;
+
+    // Check Headers first
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    } 
 
     if (!token) return res.status(401).json({ message: 'Not authorized, no token' });
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // Exclude the password hash when fetching the user
-        req.user = await User.findByPk(decoded.id, {
-            attributes: { exclude: ['password'] }
-        });
-        
-        if (!req.user) {
-            return res.status(401).json({ message: 'User no longer exists' });
-        }
-        
+        req.user = await User.findByPk(decoded.id);
         next();
     } catch (error) {
-        res.status(401).json({ message: 'Token failed or expired' });
+        res.status(401).json({ message: 'Token failed' });
     }
 };

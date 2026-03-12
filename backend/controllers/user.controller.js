@@ -24,7 +24,7 @@ export const register = async (req, res) => {
         const token = generateToken(user.id);
 
         res.cookie('token', token, cookieOptions);
-        res.status(201).json({ success: true, user: { id: user.id, name: user.name, email: user.email } });
+        res.status(201).json({ success: true, token,user: { id: user.id, name: user.name, email: user.email } });
     } catch (error) {
         res.status(500).json({ message: 'Server error during registration', error: error.message });
     }
@@ -41,7 +41,7 @@ export const login = async (req, res) => {
 
         const token = generateToken(user.id);
         res.cookie('token', token, cookieOptions);
-        res.json({ success: true, user: { id: user.id, name: user.name, email: user.email } });
+        res.json({ success: true,token, user: { id: user.id, name: user.name, email: user.email } });
     } catch (error) {
         res.status(500).json({ message: 'Server error during login', error: error.message });
     }

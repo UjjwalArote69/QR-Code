@@ -1,8 +1,9 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const QRGridSection = ({ title, badge, description, items }) => {
+const QRGridSection = ({ title, badge, description, items, onSelectType }) => {
   // State to manage whether the grid is open or collapsed
   const [isOpen, setIsOpen] = useState(true);
 
@@ -49,6 +50,7 @@ const QRGridSection = ({ title, badge, description, items }) => {
               {items.map((type) => (
                 <button
                   key={type.name}
+                  onClick={() => onSelectType && onSelectType(type)}
                   className="flex items-start p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 text-left transition-all group"
                 >
                   <div className="mr-4 mt-0.5">

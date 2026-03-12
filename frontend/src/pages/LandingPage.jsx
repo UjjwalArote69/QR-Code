@@ -1,6 +1,4 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   QrCode, ArrowRight, Activity, Palette, ShieldCheck, 
@@ -9,36 +7,10 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Pricing from '../components/Pricing';
+import { useTheme } from '../hooks/useTheme';
 
 const LandingPage = () => {
-  // --- Theme Toggle Logic ---
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newThemeState = !isDark;
-    setIsDark(newThemeState);
-    
-    if (newThemeState) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+  const { isDark, toggleTheme } = useTheme();
 
   // --- Animation variants ---
   const fadeUp = {
@@ -62,8 +34,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-slate-200 dark:selection:bg-slate-600/30 relative transition-colors duration-300">
       
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] md:w-[1000px] md:h-[600px] bg-slate-300/30 dark:bg-slate-500/10 rounded-full blur-[60px] md:blur-[120px] pointer-events-none transition-colors duration-300" />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-300">

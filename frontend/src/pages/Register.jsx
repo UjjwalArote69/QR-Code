@@ -1,43 +1,20 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Mail, Lock, User, ArrowRight, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
+import { useTheme } from '../hooks/useTheme';
 
 const Register = () => {
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
-  const [isDark, setIsDark] = useState(true);
 
-  const { register, isLoading, error } = useAuthStore();
+  const { register,  } = useAuthStore();
   const navigate = useNavigate();
 
-  // Theme logic
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newThemeState = !isDark;
-    setIsDark(newThemeState);
-    if (newThemeState) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
+  const { isDark, toggleTheme } = useTheme();
+  
 
  const handleSubmit = async (e) => {
     e.preventDefault();
