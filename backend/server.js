@@ -33,6 +33,8 @@ app.get('/q/:shortId', redirectQR);
 const PORT = process.env.PORT || 5000;
 
 connectDB();
-sequelize.sync().then(() => {
+
+// Add { alter: true } inside the sync() function
+sequelize.sync({ alter: true }).then(() => {
     app.listen(PORT, () => console.log(`🚀 NexusQR Server running on port ${PORT}`));
 });

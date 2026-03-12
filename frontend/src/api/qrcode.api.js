@@ -10,6 +10,20 @@ export const generateQRCode = async (qrData) => {
     }
 };
 
+export const createQRWithFile = async (formData) => {
+    try {
+        const response = await apiClient.post('/qrcodes/create-with-file', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error generating QR code with file:", error);
+        throw error.response?.data || error.message;
+    }
+};
+
 export const fetchMyQRCodes = async () => {
     try {
         const response = await apiClient.get('/qrcodes/my-qrs');

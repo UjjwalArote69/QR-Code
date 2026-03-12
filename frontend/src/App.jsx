@@ -21,6 +21,8 @@ import MyQRCodesView from "./pages/Dashboard/views/MyQRCodesView";
 import StatisticsView from "./pages/Dashboard/views/StatisticsView";
 import TemplatesView from "./pages/Dashboard/views/TemplatesView";
 import SettingsView from "./pages/Dashboard/views/SettingsView";
+import VCardProfile from './pages/Public/VCardProfile';
+import LinksProfile from "./pages/Public/LinksProfile";
 
 // Lazy Load Pages (Code Splitting)
 const LandingPage = lazy(
@@ -71,6 +73,8 @@ const App = () => {
           <Route path="/" element={<LandingPage/>}/>
           <Route path="/login" element={<Login/>}/>
           <Route path="/register" element={<Register/>}/>
+          <Route path="/vcard/:shortId" element={<VCardProfile />} />
+          <Route path="/links/:shortId" element={<LinksProfile />} />
           <Route
             path="/dashboard"
             element={

@@ -33,6 +33,10 @@ const QRCode = sequelize.define('QRCode', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  content: {
+    type: DataTypes.TEXT, 
+    allowNull: true,
+  },
   scanCount: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
