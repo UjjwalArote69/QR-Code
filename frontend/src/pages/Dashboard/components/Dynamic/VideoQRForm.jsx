@@ -7,6 +7,7 @@ import {
   ArrowLeft, Video as VideoIcon, AlertCircle, UploadCloud, 
   Settings2, Palette, ChevronDown, Check, X, Link as LinkIcon, Youtube
 } from 'lucide-react';
+import TemplatePicker from '../TemplatePicker';
 
 const VideoQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
@@ -257,6 +258,7 @@ const VideoQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           
           {openSection === 'design' && (
             <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
+              <TemplatePicker />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">QR Color</label>

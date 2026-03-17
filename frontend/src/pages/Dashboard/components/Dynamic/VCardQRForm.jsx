@@ -7,6 +7,7 @@ import {
   Settings2, Palette, ChevronDown, Check,
   User, Building2, Phone, Mail, Globe, MapPin
 } from 'lucide-react';
+import TemplatePicker from '../TemplatePicker';
 
 const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
@@ -209,6 +210,7 @@ const VCardQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           
           {openSection === 'design' && (
             <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
+              <TemplatePicker />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">QR Color</label>

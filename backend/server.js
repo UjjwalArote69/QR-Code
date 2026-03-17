@@ -16,11 +16,13 @@ import { connectDB, sequelize } from './config/db.js';
 import userRoute from './routes/user.route.js';
 import qrRoute from './routes/qrcode.route.js';
 import analyticsRoute from './routes/analytics.route.js';
+import templateRoute from './routes/template.route.js';
 import { redirectQR } from './controllers/qrcode.controller.js';
 
 // Import Models so Sequelize knows to create the tables
 import './models/qrcode.model.js';
 import './models/scanEvent.model.js';
+import './models/template.model.js';
 
 const app = express();
 
@@ -34,6 +36,7 @@ app.use(cookieParser());
 app.use('/api/users', userRoute);
 app.use('/api/qrcodes', qrRoute); // Used by the React frontend to create QRs
 app.use('/api/analytics', analyticsRoute); // Scan analytics pipeline
+app.use('/api/templates', templateRoute); // Design templates CRUD
 
 // === Public Scanning Route ===
 // This intercepts the scan and redirects to the targetUrl
