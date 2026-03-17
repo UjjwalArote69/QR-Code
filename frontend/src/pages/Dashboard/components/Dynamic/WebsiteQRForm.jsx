@@ -6,6 +6,7 @@ import {
   ArrowLeft, Link as LinkIcon, AlertCircle, 
   Settings2, Palette, Globe, ChevronDown, Check
 } from 'lucide-react';
+import TemplatePicker from '../TemplatePicker';
 
 const WebsiteQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
   const { builderStep, setBuilderStep } = useContext(BuilderContext);
@@ -145,7 +146,8 @@ const WebsiteQRForm = ({ onBack, onGenerated, onLiveUpdate }) => {
           
           {openSection === 'design' && (
             <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
-              
+
+              <TemplatePicker />
               <div className="grid grid-cols-2 gap-4">
                 {/* Foreground Color Picker */}
                 <div>

@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import logger from '../config/logger.js';
 
 export const protect = async (req, res, next) => {
     let token;
 
-    // Check Headers first
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
-    } 
+    }
 
     if (!token) return res.status(401).json({ message: 'Not authorized, no token' });
 
@@ -16,6 +16,7 @@ export const protect = async (req, res, next) => {
         req.user = await User.findByPk(decoded.id);
         next();
     } catch (error) {
+        logger.warn('JWT verification failed', { ip: req.ip, url: req.originalUrl });
         res.status(401).json({ message: 'Token failed' });
     }
 };
