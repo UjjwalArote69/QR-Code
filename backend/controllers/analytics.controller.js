@@ -1,9 +1,9 @@
-import { Op, fn, col, literal } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 import { sequelize } from '../config/db.js';
 import ScanEvent from '../models/scanEvent.model.js';
 import QRCode from '../models/qrcode.model.js';
+import logger from '../config/logger.js';
 
-// Helper: build date range filter
 function getDateRange(period) {
   const now = new Date();
   const start = new Date(now);
@@ -17,14 +17,12 @@ function getDateRange(period) {
   return { start, end: now };
 }
 
-// GET /api/analytics/overview?period=7d
 export const getOverview = async (req, res) => {
   try {
     const userId = req.user.id;
     const { period = '7d' } = req.query;
     const { start, end } = getDateRange(period);
 
-    // Get all QR code IDs owned by this user
     const userQRs = await QRCode.findAll({
       where: { userId },
       attributes: ['id'],
@@ -47,7 +45,6 @@ export const getOverview = async (req, res) => {
       QRCode.count({ where: { userId, isActive: true } }),
     ]);
 
-    // Previous period for trend calculation
     const prevStart = new Date(start);
     const diff = end - start;
     prevStart.setTime(prevStart.getTime() - diff);
@@ -72,12 +69,11 @@ export const getOverview = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Analytics overview error:', error);
+    logger.error('Analytics overview failed', { userId: req.user?.id, period: req.query?.period, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch analytics overview.' });
   }
 };
 
-// GET /api/analytics/timeseries?period=7d
 export const getTimeseries = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -106,7 +102,6 @@ export const getTimeseries = async (req, res) => {
       raw: true,
     });
 
-    // Fill in missing dates with zero
     const dateMap = {};
     results.forEach(r => { dateMap[r.date] = parseInt(r.scans, 10); });
 
@@ -120,12 +115,11 @@ export const getTimeseries = async (req, res) => {
 
     res.json({ success: true, data: filled });
   } catch (error) {
-    console.error('Analytics timeseries error:', error);
+    logger.error('Analytics timeseries failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch timeseries data.' });
   }
 };
 
-// GET /api/analytics/devices?period=7d
 export const getDeviceBreakdown = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -171,12 +165,11 @@ export const getDeviceBreakdown = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Analytics devices error:', error);
+    logger.error('Analytics devices failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch device data.' });
   }
 };
 
-// GET /api/analytics/geo?period=7d
 export const getGeoBreakdown = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -218,12 +211,11 @@ export const getGeoBreakdown = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Analytics geo error:', error);
+    logger.error('Analytics geo failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch geo data.' });
   }
 };
 
-// GET /api/analytics/top-campaigns?period=7d
 export const getTopCampaigns = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -268,7 +260,7 @@ export const getTopCampaigns = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Analytics top campaigns error:', error);
+    logger.error('Analytics top campaigns failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch top campaigns.' });
   }
 };

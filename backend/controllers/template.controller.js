@@ -1,4 +1,5 @@
 import Template from '../models/template.model.js';
+import logger from '../config/logger.js';
 
 export const createTemplate = async (req, res) => {
   try {
@@ -9,7 +10,6 @@ export const createTemplate = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Template name is required.' });
     }
 
-    // If setting as default, unset any existing default
     if (isDefault) {
       await Template.update({ isDefault: false }, { where: { userId, isDefault: true } });
     }
@@ -22,9 +22,10 @@ export const createTemplate = async (req, res) => {
       isDefault: isDefault || false,
     });
 
+    logger.info('Template created', { userId, templateId: template.id, name });
     res.status(201).json({ success: true, data: template });
   } catch (error) {
-    console.error('Error creating template:', error);
+    logger.error('Template creation failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to create template.' });
   }
 };
@@ -39,7 +40,7 @@ export const getTemplates = async (req, res) => {
 
     res.json({ success: true, data: templates });
   } catch (error) {
-    console.error('Error fetching templates:', error);
+    logger.error('Fetch templates failed', { userId: req.user?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to fetch templates.' });
   }
 };
@@ -55,7 +56,6 @@ export const updateTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Template not found.' });
     }
 
-    // If setting as default, unset any existing default
     if (isDefault && !template.isDefault) {
       await Template.update({ isDefault: false }, { where: { userId, isDefault: true } });
     }
@@ -66,10 +66,11 @@ export const updateTemplate = async (req, res) => {
     if (isDefault !== undefined) template.isDefault = isDefault;
 
     await template.save();
+    logger.info('Template updated', { userId, templateId: id });
 
     res.json({ success: true, data: template });
   } catch (error) {
-    console.error('Error updating template:', error);
+    logger.error('Template update failed', { userId: req.user?.id, templateId: req.params?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to update template.' });
   }
 };
@@ -85,9 +86,11 @@ export const deleteTemplate = async (req, res) => {
     }
 
     await template.destroy();
+    logger.info('Template deleted', { userId, templateId: id });
+
     res.json({ success: true, message: 'Template deleted.' });
   } catch (error) {
-    console.error('Error deleting template:', error);
+    logger.error('Template deletion failed', { userId: req.user?.id, templateId: req.params?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to delete template.' });
   }
 };
@@ -113,7 +116,7 @@ export const applyTemplate = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error applying template:', error);
+    logger.error('Template apply failed', { userId: req.user?.id, templateId: req.params?.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to apply template.' });
   }
 };

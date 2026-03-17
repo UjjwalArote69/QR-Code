@@ -1,16 +1,16 @@
 import User from '../models/user.model.js';
 import jwt from 'jsonwebtoken';
+import logger from '../config/logger.js';
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-// Reusable cookie options for consistency
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict', // Protects against CSRF
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
 export const register = async (req, res) => {
@@ -23,10 +23,13 @@ export const register = async (req, res) => {
         const user = await User.create({ name, email, password });
         const token = generateToken(user.id);
 
+        logger.info('User registered', { userId: user.id, email });
+
         res.cookie('token', token, cookieOptions);
-        res.status(201).json({ success: true, token,user: { id: user.id, name: user.name, email: user.email } });
+        res.status(201).json({ success: true, token, user: { id: user.id, name: user.name, email: user.email } });
     } catch (error) {
-        res.status(500).json({ message: 'Server error during registration', error: error.message });
+        logger.error('Registration failed', { email: req.body?.email, error: error.message });
+        res.status(500).json({ message: 'Server error during registration' });
     }
 };
 
@@ -36,19 +39,22 @@ export const login = async (req, res) => {
         const user = await User.findOne({ where: { email } });
 
         if (!user || !(await user.comparePassword(password))) {
+            logger.warn('Failed login attempt', { email, ip: req.ip });
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
         const token = generateToken(user.id);
+        logger.info('User logged in', { userId: user.id, email });
+
         res.cookie('token', token, cookieOptions);
-        res.json({ success: true,token, user: { id: user.id, name: user.name, email: user.email } });
+        res.json({ success: true, token, user: { id: user.id, name: user.name, email: user.email } });
     } catch (error) {
-        res.status(500).json({ message: 'Server error during login', error: error.message });
+        logger.error('Login failed', { email: req.body?.email, error: error.message });
+        res.status(500).json({ message: 'Server error during login' });
     }
 };
 
 export const getProfile = async (req, res) => {
-    // req.user is already fetched and stripped of the password by the auth middleware
     if (req.user) {
         res.json({ success: true, user: req.user });
     } else {
@@ -71,13 +77,15 @@ export const updateProfile = async (req, res) => {
         if (name) user.name = name;
 
         await user.save();
+        logger.info('Profile updated', { userId: user.id });
 
         res.json({
             success: true,
             user: { id: user.id, name: user.name, email: user.email },
         });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to update profile', error: error.message });
+        logger.error('Profile update failed', { userId: req.user?.id, error: error.message });
+        res.status(500).json({ message: 'Failed to update profile' });
     }
 };
 
@@ -97,10 +105,12 @@ export const changePassword = async (req, res) => {
 
         user.password = newPassword;
         await user.save();
+        logger.info('Password changed', { userId: user.id });
 
         res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to change password', error: error.message });
+        logger.error('Password change failed', { userId: req.user?.id, error: error.message });
+        res.status(500).json({ message: 'Failed to change password' });
     }
 };
 
@@ -114,19 +124,22 @@ export const deleteAccount = async (req, res) => {
         const isMatch = await user.comparePassword(password);
         if (!isMatch) return res.status(401).json({ message: 'Password is incorrect' });
 
+        const userId = user.id;
         await user.destroy();
+        logger.info('Account deleted', { userId });
 
         res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
         res.json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to delete account', error: error.message });
+        logger.error('Account deletion failed', { userId: req.user?.id, error: error.message });
+        res.status(500).json({ message: 'Failed to delete account' });
     }
 };
 
 export const logout = (req, res) => {
     res.cookie('token', '', {
         httpOnly: true,
-        expires: new Date(0) // Immediately expire the cookie
+        expires: new Date(0)
     });
     res.json({ success: true, message: 'Logged out successfully' });
 };
