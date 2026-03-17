@@ -1,5 +1,8 @@
 import crypto from "crypto";
 import QRCode from "../models/qrcode.model.js";
+import ScanEvent from "../models/scanEvent.model.js";
+import geoip from "geoip-lite";
+import { UAParser } from "ua-parser-js";
 
 export const createQRCode = async (
   req,
@@ -80,6 +83,28 @@ export const redirectQR = async (
 
     // Increment scan analytics tracking
     await qrCode.increment("scanCount");
+
+    // --- Capture detailed scan metadata ---
+    const rawIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+    const ip = rawIp === '::1' || rawIp === '127.0.0.1' ? null : rawIp;
+    const geo = ip ? geoip.lookup(ip) : null;
+    const ua = new UAParser(req.headers['user-agent']);
+    const device = ua.getDevice();
+
+    ScanEvent.create({
+      qrCodeId: qrCode.id,
+      country: geo?.country || null,
+      region: geo?.region || null,
+      city: geo?.city || null,
+      latitude: geo?.ll?.[0] || null,
+      longitude: geo?.ll?.[1] || null,
+      browser: ua.getBrowser().name || null,
+      os: ua.getOS().name || null,
+      deviceType: device.type || 'desktop',
+      referrer: req.headers['referer'] || null,
+      ip,
+      scannedAt: new Date(),
+    }).catch(err => console.error('Failed to log scan event:', err));
 
     const frontendUrl =
       process.env.FRONTEND_URL ||
