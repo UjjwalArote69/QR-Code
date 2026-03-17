@@ -68,8 +68,8 @@ const useAuthStore = create((set) => ({
     }
 
     try {
-      const user = await fetchProfile();
-      set({ user, isAuthenticated: true, isLoading: false });
+      const data = await fetchProfile();
+      set({ user: data.user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       // ADD THIS CONSOLE LOG TO CATCH THE CULPRIT:
       console.error("Auth Check Failed:", error.response?.data || error.message);
