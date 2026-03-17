@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState, Suspense, lazy, createContext } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "../../components/layout/Sidebar";
 import Topbar from "../../components/layout/Topbar";
 import { ChevronRight, Loader2 } from "lucide-react";
@@ -107,9 +108,20 @@ const Dashboard = () => {
             toggleMobileMenu={() => setIsMobileMenuOpen(true)}
           />
           
-          <Suspense fallback={<ContainerLoader text="Loading view..." />}>
-            {renderContent()}
-          </Suspense>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeNav}
+              className="flex-1 flex flex-col min-w-0 overflow-hidden"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+            >
+              <Suspense fallback={<ContainerLoader text="Loading view..." />}>
+                {renderContent()}
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </BuilderContext.Provider>

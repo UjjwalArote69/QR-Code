@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   BarChart3, Users, MousePointerClick, TrendingUp,
   Calendar, MapPin, MonitorSmartphone, ArrowUpRight,
   RefreshCw, Loader2
 } from 'lucide-react';
+import AnimatedPage from '../../../components/ui/AnimatedPage';
+import { SkeletonKPI, SkeletonChart } from '../../../components/ui/Skeleton';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -173,8 +176,10 @@ const StatisticsView = () => {
   // Geo: compute max scans for bar widths
   const maxGeoScans = geo.length > 0 ? Math.max(...geo.map(g => g.scans)) : 1;
 
+  const isInitialLoad = loading && timeseries.length === 0;
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-slate-950 transition-colors duration-300">
+    <AnimatedPage className="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-slate-950 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header & Period Selector */}
@@ -209,18 +214,25 @@ const StatisticsView = () => {
         </div>
 
         {/* KPI Cards Row */}
+        {isInitialLoad ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <SkeletonKPI key={i} />)}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
             title="Total Scans"
             value={overview.totalScans.toLocaleString()}
             trend={formatTrend(overview.scansTrend)}
             icon={BarChart3}
+            index={0}
           />
           <KPICard
             title="Unique Visitors"
             value={overview.uniqueVisitors.toLocaleString()}
             trend={formatTrend(overview.uniqueTrend)}
             icon={Users}
+            index={1}
           />
           <KPICard
             title="Scan Rate"
@@ -228,6 +240,7 @@ const StatisticsView = () => {
             trend="Stable"
             icon={MousePointerClick}
             neutral
+            index={2}
           />
           <KPICard
             title="Active Campaigns"
@@ -235,10 +248,18 @@ const StatisticsView = () => {
             trend=""
             icon={TrendingUp}
             neutral
+            index={3}
           />
         </div>
+        )}
 
         {/* Charts Row: Timeline & Device Types */}
+        {isInitialLoad ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2"><SkeletonChart /></div>
+            <SkeletonChart />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Time Series Chart */}
@@ -280,6 +301,7 @@ const StatisticsView = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Bottom Row: Geographic Data & Top Campaigns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -348,13 +370,27 @@ const StatisticsView = () => {
         </div>
 
       </div>
-    </div>
+    </AnimatedPage>
   );
 };
 
-// Reusable KPI Card Component
-const KPICard = ({ title, value, trend, icon: Icon, neutral }) => (
-  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 flex flex-col">
+// Reusable KPI Card Component with animation
+const kpiVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  show: (i) => ({
+    opacity: 1, y: 0, scale: 1,
+    transition: { delay: i * 0.08, duration: 0.35, ease: 'easeOut' },
+  }),
+};
+
+const KPICard = ({ title, value, trend, icon: Icon, neutral, index = 0 }) => (
+  <motion.div
+    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+    variants={kpiVariants}
+    initial="hidden"
+    animate="show"
+    custom={index}
+  >
     <div className="flex items-center justify-between mb-4">
       <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</span>
       <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -377,7 +413,7 @@ const KPICard = ({ title, value, trend, icon: Icon, neutral }) => (
         </span>
       )}
     </div>
-  </div>
+  </motion.div>
 );
 
 export default StatisticsView;

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   User, Mail, Shield, Lock, LogOut,
-  Check, AlertCircle, Loader2, Eye, EyeOff, Trash2
+  Check, Loader2, Eye, EyeOff, Trash2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import useAuthStore from '../../../store/authStore';
 import { updateProfile, changePassword, deleteAccount } from '../../../api/auth.api';
 import { fetchMyQRCodes } from '../../../api/qrcode.api';
+import AnimatedPage from '../../../components/ui/AnimatedPage';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 const UserProfileView = () => {
   const { user, logout, checkAuth } = useAuthStore();
@@ -14,7 +17,6 @@ const UserProfileView = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profileMsg, setProfileMsg] = useState(null);
 
   // Password form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -23,13 +25,11 @@ const UserProfileView = () => {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordMsg, setPasswordMsg] = useState(null);
 
   // Delete account
   const [deletePassword, setDeletePassword] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteMsg, setDeleteMsg] = useState(null);
 
   // Stats
   const [stats, setStats] = useState({ totalQRs: 0, totalScans: 0 });
@@ -58,15 +58,14 @@ const UserProfileView = () => {
   const handleProfileSave = async (e) => {
     e.preventDefault();
     setProfileSaving(true);
-    setProfileMsg(null);
     try {
       const result = await updateProfile({ name, email });
       if (result.success) {
-        setProfileMsg({ type: 'success', text: 'Profile updated successfully.' });
+        toast.success('Profile updated successfully');
         await checkAuth();
       }
     } catch (err) {
-      setProfileMsg({ type: 'error', text: err.message || 'Failed to update profile.' });
+      toast.error(err.message || 'Failed to update profile');
     } finally {
       setProfileSaving(false);
     }
@@ -74,14 +73,13 @@ const UserProfileView = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    setPasswordMsg(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordMsg({ type: 'error', text: 'New passwords do not match.' });
+      toast.error('New passwords do not match');
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMsg({ type: 'error', text: 'Password must be at least 6 characters.' });
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
@@ -89,13 +87,13 @@ const UserProfileView = () => {
     try {
       const result = await changePassword({ currentPassword, newPassword });
       if (result.success) {
-        setPasswordMsg({ type: 'success', text: 'Password changed successfully.' });
+        toast.success('Password changed successfully');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       }
     } catch (err) {
-      setPasswordMsg({ type: 'error', text: err.message || 'Failed to change password.' });
+      toast.error(err.message || 'Failed to change password');
     } finally {
       setPasswordSaving(false);
     }
@@ -103,16 +101,16 @@ const UserProfileView = () => {
 
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
-      setDeleteMsg({ type: 'error', text: 'Please enter your password to confirm.' });
+      toast.error('Please enter your password to confirm');
       return;
     }
     setDeleting(true);
-    setDeleteMsg(null);
     try {
       await deleteAccount(deletePassword);
+      toast.success('Account deleted');
       logout();
     } catch (err) {
-      setDeleteMsg({ type: 'error', text: err.message || 'Failed to delete account.' });
+      toast.error(err.message || 'Failed to delete account');
       setDeleting(false);
     }
   };
@@ -126,7 +124,7 @@ const UserProfileView = () => {
     : null;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-slate-950 transition-colors duration-300">
+    <AnimatedPage className="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-slate-950 transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
@@ -157,9 +155,8 @@ const UserProfileView = () => {
             <section className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Personal Details</h2>
 
-              {/* Avatar & Info */}
               <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-100 dark:border-slate-800">
-                <div className="w-24 h-24 rounded-full bg-slate-800 dark:bg-slate-200 flex items-center justify-center text-white dark:text-slate-900 text-2xl font-bold">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center text-white dark:text-slate-900 text-2xl font-bold shadow-lg">
                   {initials}
                 </div>
                 <div className="text-center sm:text-left">
@@ -173,12 +170,7 @@ const UserProfileView = () => {
                 </div>
               </div>
 
-              {/* Profile Form */}
               <form onSubmit={handleProfileSave}>
-                {profileMsg && (
-                  <StatusMessage type={profileMsg.type} text={profileMsg.text} onDismiss={() => setProfileMsg(null)} />
-                )}
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
@@ -229,10 +221,6 @@ const UserProfileView = () => {
               </div>
 
               <form onSubmit={handlePasswordChange}>
-                {passwordMsg && (
-                  <StatusMessage type={passwordMsg.type} text={passwordMsg.text} onDismiss={() => setPasswordMsg(null)} />
-                )}
-
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Current Password</label>
@@ -332,62 +320,38 @@ const UserProfileView = () => {
               <p className="text-xs text-red-600/70 dark:text-red-400/70 mb-4">
                 Permanently delete your account and all associated QR codes, analytics, and templates. This action cannot be undone.
               </p>
-
-              {!showDeleteConfirm ? (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
-                >
-                  Delete Account
-                </button>
-              ) : (
-                <div className="space-y-3">
-                  {deleteMsg && (
-                    <StatusMessage type={deleteMsg.type} text={deleteMsg.text} onDismiss={() => setDeleteMsg(null)} />
-                  )}
-                  <input
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    placeholder="Enter password to confirm"
-                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-red-300 dark:border-red-800 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteMsg(null); }}
-                      className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDeleteAccount}
-                      disabled={deleting || !deletePassword}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all disabled:opacity-50"
-                    >
-                      {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Confirm Delete
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+              >
+                Delete Account
+              </button>
             </section>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Delete Account Modal */}
+      <ConfirmModal
+        open={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}
+        onConfirm={handleDeleteAccount}
+        title="Delete Your Account?"
+        message="This will permanently delete your account, all QR codes, analytics, and templates. This cannot be undone."
+        confirmText="Delete Account"
+        loading={deleting}
+        variant="danger"
+      >
+        <input
+          type="password"
+          value={deletePassword}
+          onChange={(e) => setDeletePassword(e.target.value)}
+          placeholder="Enter your password to confirm"
+          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none transition-all"
+        />
+      </ConfirmModal>
+    </AnimatedPage>
   );
 };
-
-const StatusMessage = ({ type, text, onDismiss }) => (
-  <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 text-sm ${
-    type === 'success'
-      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
-      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
-  }`}>
-    {type === 'success' ? <Check className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-    <span className="flex-1">{text}</span>
-    <button onClick={onDismiss} className="text-current opacity-50 hover:opacity-100">&times;</button>
-  </div>
-);
 
 export default UserProfileView;
