@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { fetchMyQRCodes, deleteQRCode } from '../../../api/qrcode.api'; 
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { fetchMyQRCodes, deleteQRCode } from '../../../api/qrcode.api';
 import { QRCodeSVG } from 'qrcode.react';
-import { 
-  Loader2, Link as LinkIcon, BarChart2, Calendar, 
-  CheckCircle2, QrCode, Trash2, Search, Download, Filter, RefreshCw 
-} from 'lucide-react'; 
+import { jsPDF } from 'jspdf';
+import {
+  Loader2, Link as LinkIcon, BarChart2, Calendar,
+  CheckCircle2, QrCode, Trash2, Search, Download, Filter, RefreshCw,
+  ChevronDown, FileImage, FileText, Image
+} from 'lucide-react';
 
 const MyQRCodesView = () => {
   const [qrCodes, setQrCodes] = useState([]);
@@ -59,21 +61,113 @@ const MyQRCodesView = () => {
     }
   };
 
-  const handleDownloadSVG = (qrId, title) => {
-    const svgElement = document.getElementById(`qr-${qrId}`);
-    if (!svgElement) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${title.replace(/\s+/g, '-').toLowerCase()}-qr.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  // Export dropdown state
+  const [exportMenuId, setExportMenuId] = useState(null);
+  const exportMenuRef = useRef(null);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Helper: get SVG data URL at a given size for raster export
+  const svgToCanvas = (qrId, size = 1024) => {
+    return new Promise((resolve, reject) => {
+      const svgElement = document.getElementById(`qr-${qrId}`);
+      if (!svgElement) return reject(new Error('SVG not found'));
+
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        resolve(canvas);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+      img.src = url;
+    });
+  };
+
+  const slugify = (title) => title.replace(/\s+/g, '-').toLowerCase();
+
+  const handleDownload = async (qrId, title, format) => {
+    setExportMenuId(null);
+    const filename = slugify(title);
+
+    if (format === 'svg') {
+      const svgElement = document.getElementById(`qr-${qrId}`);
+      if (!svgElement) return;
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}-qr.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    try {
+      const canvas = await svgToCanvas(qrId, 1024);
+
+      if (format === 'png') {
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${filename}-qr.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      } else if (format === 'jpeg') {
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${filename}-qr.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 'image/jpeg', 0.95);
+      } else if (format === 'pdf') {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const qrSize = 120;
+        const x = (pageWidth - qrSize) / 2;
+        const y = 40;
+        pdf.setFontSize(18);
+        pdf.text(title, pageWidth / 2, 25, { align: 'center' });
+        pdf.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+        pdf.setFontSize(10);
+        pdf.setTextColor(120);
+        pdf.text('Generated by NexusQR', pageWidth / 2, y + qrSize + 12, { align: 'center' });
+        pdf.save(`${filename}-qr.pdf`);
+      }
+    } catch (err) {
+      console.error(`Failed to export as ${format}:`, err);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -231,14 +325,35 @@ const MyQRCodesView = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* DOWNLOAD BUTTON */}
-                    <button 
-                      onClick={() => handleDownloadSVG(qr.id, qr.title)}
-                      className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors shadow-sm"
-                      title="Download SVG"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                    {/* DOWNLOAD DROPDOWN */}
+                    <div className="relative" ref={exportMenuId === qr.id ? exportMenuRef : null}>
+                      <button
+                        onClick={() => setExportMenuId(exportMenuId === qr.id ? null : qr.id)}
+                        className="flex items-center gap-0.5 p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors shadow-sm"
+                        title="Download QR Code"
+                      >
+                        <Download className="w-4 h-4" />
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {exportMenuId === qr.id && (
+                        <div className="absolute right-0 bottom-full mb-1 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 py-1 animate-in fade-in duration-150">
+                          <button onClick={() => handleDownload(qr.id, qr.title, 'svg')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                            <QrCode className="w-4 h-4 text-slate-400" /> SVG
+                          </button>
+                          <button onClick={() => handleDownload(qr.id, qr.title, 'png')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                            <FileImage className="w-4 h-4 text-blue-400" /> PNG
+                          </button>
+                          <button onClick={() => handleDownload(qr.id, qr.title, 'jpeg')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                            <Image className="w-4 h-4 text-amber-400" /> JPEG
+                          </button>
+                          <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+                          <button onClick={() => handleDownload(qr.id, qr.title, 'pdf')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                            <FileText className="w-4 h-4 text-red-400" /> PDF
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     {/* COPY LINK BUTTON */}
                     <button 
